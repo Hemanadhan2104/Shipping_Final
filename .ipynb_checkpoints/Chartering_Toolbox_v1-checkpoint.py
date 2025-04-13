@@ -6,8 +6,20 @@ import pandas as pd
 from matplotlib.ticker import PercentFormatter
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-
+# Hide Streamlit's default menu and GitHub link
 st.set_page_config(layout="wide")
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 
 # Inject custom CSS to style the buttons
 st.markdown(
