@@ -624,7 +624,7 @@ if __name__ == "__main__":
 
         elif page_5_sidebar == "Vessel Profile Data":
             st.title("🚢 Vessel Profile Data")
-
+    
             # Vessel Data
             vessel_data = pd.DataFrame({
                 "Vessel_ID": range(1, 11),
@@ -639,24 +639,24 @@ if __name__ == "__main__":
                 "CII_Rating": ["A", "A", "A", "B", "B", "B", "C", "C", "C", "C"],
                 "Fuel_Consumption_MT_per_day": [70, 72, 74, 85, 88, 90, 100, 102, 105, 107]
             })
-
+    
             # Input for Fuel Price and Voyage Days
-            fuel_price = st.number_input("Enter Fuel Price (per MT in USD)", min_value=0.0, value=500.0, step=10.0)
-            voyage_days = int(st.number_input("Enter Voyage Days", min_value=1, value=10, step=1))
-            freight_rate_per_day = float(st.number_input("Enter Freight Rate per Day (USD)", min_value=0.0, value=100000.0, step=1000.0))
-
+            fuel_price = st.number_input("Enter Fuel Price (per MT in USD)", min_value=0.0, value=500.0, step=10.0, key="fuel_price_input") # Added key
+            voyage_days = int(st.number_input("Enter Voyage Days", min_value=1, value=10, step=1, key="voyage_days_input")) # Added key
+            freight_rate_per_day = float(st.number_input("Enter Freight Rate per Day (USD)", min_value=0.0, value=100000.0, step=1000.0, key="freight_rate_input") )# Added key
+    
             # Calculate Fuel Cost Per Day and Total Cost
             vessel_data["Fuel_Cost_per_Day"] = (vessel_data["Fuel_Consumption_MT_per_day"] * fuel_price).astype(int)
             vessel_data["Total_Voyage_Cost"] = (vessel_data["Fuel_Cost_per_Day"] * voyage_days).astype(int)
-
+    
             # Calculate Freight Earnings and Profit
             vessel_data["Total_Freight_Earnings"] = freight_rate_per_day * voyage_days
             vessel_data["Total_Profit"] = vessel_data["Total_Freight_Earnings"] - vessel_data["Total_Voyage_Cost"]
-
+    
             # Ensure all values are numeric and format correctly
             numeric_columns = ["Capacity_CBM", "FuelEU_GHG_Compliance", "Fuel_Consumption_MT_per_day", "Fuel_Cost_per_Day", "Total_Voyage_Cost", "Total_Freight_Earnings", "Total_Profit"]
             vessel_data[numeric_columns] = vessel_data[numeric_columns].apply(pd.to_numeric)
-
+    
             # Format table to display values in a single line and center-align
             st.markdown(
                 vessel_data.style.set_properties(
@@ -666,177 +666,169 @@ if __name__ == "__main__":
                 ]).format({col: "{:,.0f}" for col in numeric_columns}).to_html(),
                 unsafe_allow_html=True
             )
-
+    
             # Show a summary of total fleet fuel cost
             total_fuel_cost = vessel_data["Fuel_Cost_per_Day"].sum()
             total_voyage_cost = vessel_data["Total_Voyage_Cost"].sum()
             total_freight_earnings = int(freight_rate_per_day * voyage_days)
             total_profit = total_freight_earnings - total_voyage_cost
-
-            # st.metric(label="Total Fleet Fuel Cost per Day (USD)", value=f"<span class='math-inline'>${total_fuel_cost:,}</span>")
-            # st.metric(label="Total Voyage Cost (USD)", value=f"<span class='math-inline'>${total_voyage_cost:,}</span>")
-            # st.metric(label="Total Freight Earnings (USD)", value=f"<span class='math-inline'>${total_freight_earnings:,}</span>")
-            # st.metric(label="Total Profit (USD)", value=f"<span class='math-inline'>${total_profit:,}</span>")
-
+    
             st.metric(label="Total Fleet Fuel Cost per Day (USD)", value=f"${total_fuel_cost:,.0f}")
             st.metric(label="Total Voyage Cost (USD)", value=f"${total_voyage_cost:,.0f}")
             st.metric(label="Total Freight Earnings (USD)", value=f"${total_freight_earnings:,.0f}")
             st.metric(label="Total Profit (USD)", value=f"${total_profit:,.0f}")
+    
             col_empty, col_back_button = st.columns([5, 1])
-            with col_back_button:
-                if st.button("Go Back to Main"):
-                    st.session_state.page = "main"
-
+            # with col_back_button:
+            #     if st.button("Go Back to Main", key="vessel_back_button"): # Added unique key here!
+            #         st.session_state.page = "main"
         elif page_5_sidebar == "LNG Market Trends":
-            st.title("📈 LNG Market Trends")
+                st.title("📈 LNG Market Trends")
         
-            base_url = "https://docs.google.com/spreadsheets/d/1kySjcfv1jMkDRrqAD9qS10KjIs5H1Vdu/gviz/tq?tqx=out:csv&sheet="
-            sheet_names = {
+                base_url = "https://docs.google.com/spreadsheets/d/1kySjcfv1jMkDRrqAD9qS10KjIs5H1Vdu/gviz/tq?tqx=out:csv&sheet="
+                sheet_names = {
         "Weekly": "Weekly%20data_160K%20CBM",
         "Monthly": "Monthly%20data_160K%20CBM",
         "Yearly": "Yearly%20data_160%20CBM"
     }
         
-            freq_option = st.radio("Select Data Frequency", ["Weekly", "Monthly", "Yearly"])
-            google_sheets_url = f"{base_url}{sheet_names[freq_option]}"
+                freq_option = st.radio("Select Data Frequency", ["Weekly", "Monthly", "Yearly"], key="freq_radio") # Added key
+                google_sheets_url = f"{base_url}{sheet_names[freq_option]}"
         
-            df_filtered = pd.DataFrame()
+                df_filtered = pd.DataFrame()
         
-            try:
-                df_selected = pd.read_csv(google_sheets_url, dtype=str)
+                try:
+                    df_selected = pd.read_csv(google_sheets_url, dtype=str)
         
-                if "Date" in df_selected.columns:
-                    df_selected["Date"] = pd.to_datetime(df_selected["Date"], errors='coerce')
-                    df_selected = df_selected.dropna(subset=["Date"]).sort_values(by="Date")
-                else:
-                    st.error("⚠️ 'Date' column not found in the dataset.")
+                    if "Date" in df_selected.columns:
+                        df_selected["Date"] = pd.to_datetime(df_selected["Date"], errors='coerce')
+                        df_selected = df_selected.dropna(subset=["Date"]).sort_values(by="Date")
+                    else:
+                        st.error("⚠️ 'Date' column not found in the dataset.")
         
-                for col in df_selected.columns:
-                    if col != "Date":
-                        df_selected[col] = pd.to_numeric(df_selected[col], errors='coerce').fillna(0)
+                    for col in df_selected.columns:
+                        if col != "Date":
+                            df_selected[col] = pd.to_numeric(df_selected[col], errors='coerce').fillna(0)
         
-                available_columns = [col for col in df_selected.columns if col != "Date"]
-                column_options = st.multiselect("Select Data Columns", available_columns, default=available_columns[:2] if available_columns else [])
+                    available_columns = [col for col in df_selected.columns if col != "Date"]
+                    column_options = st.multiselect("Select Data Columns", available_columns, default=available_columns[:2] if available_columns else [], key="column_multiselect") # Added key
         
-                if "Date" in df_selected.columns:
-                    start_date = st.date_input("Select Start Date", df_selected["Date"].min())
-                    end_date = st.date_input("Select End Date", df_selected["Date"].max())
-                    df_filtered = df_selected[(df_selected["Date"] >= pd.to_datetime(start_date)) & (df_selected["Date"] <= pd.to_datetime(end_date))]
+                    if "Date" in df_selected.columns:
+                        start_date = st.date_input("Select Start Date", df_selected["Date"].min(), key="start_date_input") # Added key
+                        end_date = st.date_input("Select End Date", df_selected["Date"].max(), key="end_date_input") # Added key
+                        df_filtered = df_selected[(df_selected["Date"] >= pd.to_datetime(start_date)) & (df_selected["Date"] <= pd.to_datetime(end_date))]
         
         
-                    if len(column_options) > 0:
-                        num_plots = (len(column_options) + 1) // 2
-                        specs = [[{'secondary_y': True}] for _ in range(num_plots)]
-                        fig = make_subplots(rows=num_plots, cols=1, shared_xaxes=True, vertical_spacing=0.3, specs=specs)
+                        if len(column_options) > 0:
+                            num_plots = (len(column_options) + 1) // 2
+                            specs = [[{'secondary_y': True}] for _ in range(num_plots)]
+                            fig = make_subplots(rows=num_plots, cols=1, shared_xaxes=True, vertical_spacing=0.3, specs=specs)
         
-                        for i in range(0, len(column_options), 2):
-                            row_num = (i // 2) + 1
+                            for i in range(0, len(column_options), 2):
+                                row_num = (i // 2) + 1
         
-                            # Plot the first column in the pair
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=df_filtered["Date"],
-                                    y=df_filtered[column_options[i]],
-                                    mode='lines',
-                                    name=column_options[i],
-                                    hovertemplate='Date: %{x}<br>Value: %{y}<extra></extra>',
-                                    showlegend=True,
-                                    legendgroup=column_options[i],
-                                ),
-                                row=row_num,
-                                col=1,
-                                secondary_y=False,
-                            )
-                            fig.update_yaxes(title_text=column_options[i], row=row_num, col=1, secondary_y=False)
-        
-                            # Plot the second column in the pair (if it exists)
-                            if i + 1 < len(column_options):
+                                # Plot the first column in the pair
                                 fig.add_trace(
                                     go.Scatter(
                                         x=df_filtered["Date"],
-                                        y=df_filtered[column_options[i + 1]],
+                                        y=df_filtered[column_options[i]],
                                         mode='lines',
-                                        name=column_options[i + 1],
+                                        name=column_options[i],
                                         hovertemplate='Date: %{x}<br>Value: %{y}<extra></extra>',
                                         showlegend=True,
-                                        legendgroup=column_options[i + 1],
+                                        legendgroup=column_options[i],
                                     ),
                                     row=row_num,
                                     col=1,
-                                    secondary_y=True,
+                                    secondary_y=False,
                                 )
-                                fig.update_yaxes(title_text=column_options[i + 1], row=row_num, col=1, secondary_y=True)
+                                fig.update_yaxes(title_text=column_options[i], row=row_num, col=1, secondary_y=False)
+        
+                                # Plot the second column in the pair (if it exists)
+                                if i + 1 < len(column_options):
+                                    fig.add_trace(
+                                        go.Scatter(
+                                            x=df_filtered["Date"],
+                                            y=df_filtered[column_options[i + 1]],
+                                            mode='lines',
+                                            name=column_options[i + 1],
+                                            hovertemplate='Date: %{x}<br>Value: %{y}<extra></extra>',
+                                            showlegend=True,
+                                            legendgroup=column_options[i + 1],
+                                        ),
+                                        row=row_num,
+                                        col=1,
+                                        secondary_y=True,
+                                    )
+                                    fig.update_yaxes(title_text=column_options[i + 1], row=row_num, col=1, secondary_y=True)
         
         
-                        fig.update_layout(
-                            title="LNG Market Rates Over Time",
-                            xaxis=dict(
-                                title=f"Date Range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}",
-                                tickangle=45,
-                                tickformatstops=[dict(dtickrange=[None, None], value="%Y")],
-                                range=[df_filtered["Date"].min(), df_filtered["Date"].max()]
-                            ),
-                            hovermode="x unified",
-                            showlegend=True,  # Set showlegend to True at the layout level
-                            height=300 * num_plots,
-                        )
+                            fig.update_layout(
+                                title="LNG Market Rates Over Time",
+                                xaxis=dict(
+                                    title=f"Date Range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}",
+                                    tickangle=45,
+                                    tickformatstops=[dict(dtickrange=[None, None], value="%Y")],
+                                    range=[df_filtered["Date"].min(), df_filtered["Date"].max()]
+                                ),
+                                hovermode="x unified",
+                                showlegend=True,  # Set showlegend to True at the layout level
+                                height=300 * num_plots,
+                            )
         
-                        st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, use_container_width=True)
         
-                    else:
-                        st.warning("Please select at least one data column.")
-        
+                        else:
+                            st.warning("Please select at least one data column.")
         
         
                     col_empty, col_back_button = st.columns([5, 1])
                     with col_back_button:
-                        if st.button("Go Back to Main"):
+                        if st.button("Go Back to Main", key="back_button"): # Added key here!
                             st.session_state.page = "main"
-            except Exception as e:
-                st.error(f"❌ Error loading data: {e}")
-                        
-        
+                except Exception as e:
+                    st.error(f"❌ Error loading data: {e}")
         elif page_5_sidebar == "Yearly Simulation Data":
                 st.title("📊 Yearly Simulation Data")
-            
+
                 base_url = "https://docs.google.com/spreadsheets/d/1kySjcfv1jMkDRrqAD9qS10KjIs5H1Vdu/gviz/tq?tqx=out:csv&sheet=Yearly%20equilibrium"
-                
+
                 try:
                     df_yearly_sim = pd.read_csv(base_url, dtype=str)
-            
+
                     if "Year" in df_yearly_sim.columns:
                         df_yearly_sim["Year"] = pd.to_datetime(df_yearly_sim["Year"], format="%Y", errors='coerce').dt.year
                         df_yearly_sim = df_yearly_sim.dropna(subset=["Year"]).sort_values(by="Year")
                     else:
                         st.error("⚠️ 'Year' column not found in the dataset.")
-            
+
                     for col in df_yearly_sim.columns:
                         if col != "Year":
                             df_yearly_sim[col] = pd.to_numeric(df_yearly_sim[col], errors='coerce').fillna(0)
-            
+
                     available_columns = [col for col in df_yearly_sim.columns if col != "Year"]
-                    variable_option = st.multiselect("Select Data Columns", available_columns, default=available_columns[:2] if available_columns else [])
-            
-                    start_year = st.number_input("Select Start Year", int(df_yearly_sim["Year"].min()), int(df_yearly_sim["Year"].max()), int(df_yearly_sim["Year"].min()))
-                    end_year = st.number_input("Select End Year", int(df_yearly_sim["Year"].min()), int(df_yearly_sim["Year"].max()), int(df_yearly_sim["Year"].max()))
+                    variable_option = st.multiselect("Select Data Columns", available_columns, default=available_columns[:2] if available_columns else [], key="yearly_variable_multiselect") # Added key
+
+                    start_year = st.number_input("Select Start Year", int(df_yearly_sim["Year"].min()), int(df_yearly_sim["Year"].max()), int(df_yearly_sim["Year"].min()), key="yearly_start_year_input") # Added key
+                    end_year = st.number_input("Select End Year", int(df_yearly_sim["Year"].min()), int(df_yearly_sim["Year"].max()), int(df_yearly_sim["Year"].max()), key="yearly_end_year_input") # Added key
                     df_filtered = df_yearly_sim[(df_yearly_sim["Year"] >= start_year) & (df_yearly_sim["Year"] <= end_year)]
-            
+
                     # User selects a specific year
-                    selected_year = st.number_input("Select a Year to Display Data", int(df_yearly_sim["Year"].min()), int(df_yearly_sim["Year"].max()), int(df_yearly_sim["Year"].max()))
-            
+                    selected_year = st.number_input("Select a Year to Display Data", int(df_yearly_sim["Year"].min()), int(df_yearly_sim["Year"].max()), int(df_yearly_sim["Year"].max()), key="yearly_selected_year_input") # Added key
+
                     if variable_option:
                         selected_data = df_yearly_sim[df_yearly_sim["Year"] == selected_year][variable_option]
                         st.subheader(f"Data for {selected_year}")
                         st.write(selected_data)
-            
+
                     if len(variable_option) > 0 and not df_filtered.empty:
                         num_plots = (len(variable_option) + 1) // 2
                         specs = [[{'secondary_y': True}] for _ in range(num_plots)]
                         fig = make_subplots(rows=num_plots, cols=1, shared_xaxes=True, vertical_spacing=0.3, specs=specs)
-            
+
                         for i in range(0, len(variable_option), 2):
                             row_num = (i // 2) + 1
-            
+
                             # Plot the first column in the pair
                             fig.add_trace(
                                 go.Scatter(
@@ -853,7 +845,7 @@ if __name__ == "__main__":
                                 secondary_y=False,
                             )
                             fig.update_yaxes(title_text=variable_option[i], row=row_num, col=1, secondary_y=False)
-            
+
                             # Plot the second column in the pair (if it exists)
                             if i + 1 < len(variable_option):
                                 fig.add_trace(
@@ -871,7 +863,7 @@ if __name__ == "__main__":
                                     secondary_y=True,
                                 )
                                 fig.update_yaxes(title_text=variable_option[i + 1], row=row_num, col=1, secondary_y=True)
-            
+
                         fig.update_layout(
                             title="Yearly Simulation Trends",
                             xaxis=dict(
@@ -889,10 +881,10 @@ if __name__ == "__main__":
                         st.warning("Please select at least one data column to display the plot.")
                     elif df_filtered.empty:
                         st.warning("No data available for the selected year range.")
-            
+
                     col_empty, col_back_button = st.columns([5, 1])
                     with col_back_button:
-                        if st.button("Go Back to Main"):
+                        if st.button("Go Back to Main", key="yearly_back_button"): # Added key here!
                             st.session_state.page = "main"
                 except Exception as e:
                     st.error(f"❌ Error loading data: {e}")
