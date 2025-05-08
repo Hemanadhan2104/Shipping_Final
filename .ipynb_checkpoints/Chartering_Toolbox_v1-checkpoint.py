@@ -332,7 +332,10 @@ if __name__ == "__main__":
                 vessel_data.at[idx, "Draft_m"] = st.number_input("Draft (m)", value=row["Draft_m"], key=f"draft_{idx}")
                 vessel_data.at[idx, "Operational_m"] = st.number_input("Operational Cost (m)", value=row["Operational_m"], key=f"operational_{idx}")
                 vessel_data.at[idx, "Margin"] = st.number_input("Margin (USD/day)", value=row["Margin"], key=f"margin_{idx}")
-    
+
+                # Save updated data
+                st.session_state["vessel_data"] = vessel_data
+
                 show_details = st.toggle("Show Performance Details", key=f"toggle_{idx}")
                 if show_details:
                     st.subheader("✏️ Speed vs. Fuel Consumption (tons/day)")
@@ -425,24 +428,14 @@ if __name__ == "__main__":
             if st.button("Go Back to Main"):
                 st.session_state.page = "main"
     
-        vessel_data = pd.DataFrame({
-            "Vessel_ID": range(1, 11),
-            "Name": [f"LNG Carrier {chr(65 + i)}" for i in range(10)],
-            "Length_m": [295] * 10,
-            "Beam_m": [46] * 10,
-            "Draft_m": [11.5] * 10,
-            "Capacity_CBM": [160000] * 10,
-            "FuelEU_GHG_Compliance": [65, 65, 65, 80, 80, 80, 95, 95, 95, 95],
-            "CII_Rating": ["A", "A", "A", "B", "B", "B", "C", "C", "C", "C"],
-            "Main_Engine_Consumption_MT_per_day": [70, 72, 74, 85, 88, 90, 100, 102, 105, 107],
-            "Generator_Consumption_MT_per_day": [5, 5, 5, 6, 6, 6, 7, 7, 7, 7],
-            "Boil_Off_Rate_percent": [0.08, 0.08, 0.08, 0.09, 0.09, 0.09, 0.07, 0.07, 0.07, 0.07],
-            "Margin": [2000] * 10
-        })
+        # Use vessel_data from session state if available
+        if "vessel_data" in st.session_state:
+            vessel_data = st.session_state["vessel_data"]
+        else:
+            st.error("Vessel data not found. Please fill out data in the previous page first.")
+            return
     
-        # col_input, col_results = st.columns([1, 2]) # Adjusted column widths
-        col_input, col_results = st.columns([0.7, 2.3]) # Further adjusted column widths
-
+        col_input, col_results = st.columns([0.7, 2.3])  # Adjusted column widths
     
         with col_input:
             st.subheader("Simulation Inputs")
@@ -453,16 +446,27 @@ if __name__ == "__main__":
             penalty_per_excess_unit = st.number_input("Penalty per Excess GHG Unit (USD)", value=1000)
             base_spot_rate = st.number_input("Base Spot Rate (USD/day)", value=120000)
     
+            selected_vessel_name = st.selectbox("Select Vessel to Simulate", vessel_data["Name"])
+            selected_vessel_idx = vessel_data[vessel_data["Name"] == selected_vessel_name].index[0]
+            vessel_data_path = f"data/vessel_{selected_vessel_idx}.csv"
+    
+            if os.path.exists(vessel_data_path):
+                vessel_csv_data = pd.read_csv(vessel_data_path)
+                speed_options = vessel_csv_data["Speed (knots)"].dropna().unique()
+                selected_speed = st.selectbox("Select Speed (knots)", speed_options)
+            else:
+                st.warning(f"No data found for vessel: {selected_vessel_name}")
+    
         with col_results:
             st.subheader("Deployment Simulation Results")
-            total_co2_emissions = []
             results = []
     
             for index, vessel in vessel_data.iterrows():
-                ref_total_fuel = vessel["Main_Engine_Consumption_MT_per_day"] + vessel["Generator_Consumption_MT_per_day"]
-                adjusted_fuel = ref_total_fuel
+                # Use Boil Off Rate for adjusted fuel if selected
                 if carbon_calc_method == "Boil Off Rate":
                     adjusted_fuel = vessel["Boil_Off_Rate_percent"] * vessel["Capacity_CBM"] / 1000
+                else:
+                    adjusted_fuel = 50  # Use a fixed dummy value if you removed actual fuel data
     
                 auto_co2 = adjusted_fuel * 3.114
                 carbon_cost = auto_co2 * ets_price
@@ -487,7 +491,8 @@ if __name__ == "__main__":
                 })
     
             results_df = pd.DataFrame(results)
-            st.dataframe(results_df, use_container_width=True) # Ensure dataframe uses available width
+            st.dataframe(results_df, use_container_width=True)
+
 
     def page_3():
         st.title("Voyage Simulation Advisor")
