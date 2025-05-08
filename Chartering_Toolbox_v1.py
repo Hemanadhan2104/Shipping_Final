@@ -311,7 +311,8 @@ if __name__ == "__main__":
                 "Boil_Off_Rate_percent": [0.08, 0.08, 0.08, 0.09, 0.09, 0.09, 0.07, 0.07, 0.07, 0.07],
                 "Margin": [2000] * 10,
                 "Operational_m": [50000] * 10,
-                "Performance_Profile": ["good"] * 10
+                "Performance_Profile": ["good"] * 10,
+                 "Actual_GHG_Intensity": [50] * 10 
             })
     
         vessel_data = st.session_state["vessel_data"]
@@ -331,7 +332,14 @@ if __name__ == "__main__":
                 vessel_data.at[idx, "Beam_m"] = st.number_input("Beam (m)", value=row["Beam_m"], key=f"beam_{idx}")
                 vessel_data.at[idx, "Draft_m"] = st.number_input("Draft (m)", value=row["Draft_m"], key=f"draft_{idx}")
                 vessel_data.at[idx, "Operational_m"] = st.number_input("Operational Cost (m)", value=row["Operational_m"], key=f"operational_{idx}")
+               
                 vessel_data.at[idx, "Margin"] = st.number_input("Margin (USD/day)", value=row["Margin"], key=f"margin_{idx}")
+                # Input for Actual GHG Intensity (gCO2e/MJ)
+                vessel_data.at[idx, "Actual_GHG_Intensity"] = st.number_input(
+                    "Actual GHG Intensity (gCO2e/MJ)", 
+                    value=row["Actual_GHG_Intensity"], 
+                    key=f"ghg_intensity_{idx}"
+                )
 
                 # Save updated data
                 st.session_state["vessel_data"] = vessel_data
@@ -417,9 +425,6 @@ if __name__ == "__main__":
                         st.error(f"Error processing data: {e}")
 
 
-
-
-
     def page_2():
         st.title("Deployment Simulation")
     
@@ -439,6 +444,17 @@ if __name__ == "__main__":
     
         with col_input:
             st.subheader("Simulation Inputs")
+    
+            # Use vessel_0.csv for available speeds (assumption)
+            default_vessel_path = "data/vessel_0.csv"
+            if os.path.exists(default_vessel_path):
+                default_csv_data = pd.read_csv(default_vessel_path)
+                speed_options = default_csv_data["Speed (knots)"].dropna().unique()
+                selected_speed = st.selectbox("Select Speed (knots)", speed_options)
+            else:
+                st.warning("Speed options not found. Make sure data/vessel_0.csv exists.")
+                return
+    
             carbon_calc_method = st.selectbox("Carbon Calculation Method", ["Fixed Rate", "Boil Off Rate"])
             ets_price = st.number_input("ETS Price (USD/MT CO2)", value=75)
             lng_bunker_price = st.number_input("LNG Bunker Price (USD/MT)", value=600)
@@ -446,39 +462,40 @@ if __name__ == "__main__":
             penalty_per_excess_unit = st.number_input("Penalty per Excess GHG Unit (USD)", value=1000)
             base_spot_rate = st.number_input("Base Spot Rate (USD/day)", value=120000)
     
-            selected_vessel_name = st.selectbox("Select Vessel to Simulate", vessel_data["Name"])
-            selected_vessel_idx = vessel_data[vessel_data["Name"] == selected_vessel_name].index[0]
-            vessel_data_path = f"data/vessel_{selected_vessel_idx}.csv"
-    
-            if os.path.exists(vessel_data_path):
-                vessel_csv_data = pd.read_csv(vessel_data_path)
-                speed_options = vessel_csv_data["Speed (knots)"].dropna().unique()
-                selected_speed = st.selectbox("Select Speed (knots)", speed_options)
-            else:
-                st.warning(f"No data found for vessel: {selected_vessel_name}")
-    
         with col_results:
             st.subheader("Deployment Simulation Results")
             results = []
     
             for index, vessel in vessel_data.iterrows():
-                # Use Boil Off Rate for adjusted fuel if selected
+                vessel_data_path = f"data/vessel_{index}.csv"
+    
+                # Default fuel consumption
+                fuel_consumption = 0
+    
+                if os.path.exists(vessel_data_path):
+                    vessel_csv_data = pd.read_csv(vessel_data_path)
+                    matching_row = vessel_csv_data[vessel_csv_data["Speed (knots)"] == selected_speed]
+                    if not matching_row.empty:
+                        fuel_consumption = matching_row["Fuel Consumption (tons/day)"].values[0]
+    
+                # Use Boil Off Rate if selected
                 if carbon_calc_method == "Boil Off Rate":
                     adjusted_fuel = vessel["Boil_Off_Rate_percent"] * vessel["Capacity_CBM"] / 1000
                 else:
-                    adjusted_fuel = 50  # Use a fixed dummy value if you removed actual fuel data
+                    adjusted_fuel = fuel_consumption
     
                 auto_co2 = adjusted_fuel * 3.114
-                carbon_cost = auto_co2 * ets_price
+                carbon_cost = adjusted_fuel * ets_price
                 fuel_cost = adjusted_fuel * lng_bunker_price
                 margin_cost = vessel["Margin"]
     
+                # GHG Penalty calculation
                 ghg_penalty = 0
-                if vessel["FuelEU_GHG_Compliance"] > required_ghg_intensity:
-                    excess = vessel["FuelEU_GHG_Compliance"] - required_ghg_intensity
+                if vessel["Actual_GHG_Intensity"] > required_ghg_intensity:
+                    excess = vessel["Actual_GHG_Intensity"] - required_ghg_intensity
                     ghg_penalty = excess * penalty_per_excess_unit
-    
                 breakeven = fuel_cost + carbon_cost + margin_cost + ghg_penalty
+                vessel_market = base_spot_rate / breakeven if breakeven else 0
     
                 results.append({
                     "Vessel": vessel["Name"],
@@ -486,7 +503,9 @@ if __name__ == "__main__":
                     "Carbon Cost ($/day)": f"{carbon_cost:,.1f}",
                     "GHG Penalty ($/day)": f"{ghg_penalty:,.1f}",
                     "Margin ($/day)": f"{margin_cost:,.1f}",
+                    # "Operation Cost ($/day)": f"{operation_m:,.1f}",
                     "Breakeven Spot ($/day)": f"{breakeven:,.1f}",
+                    "Vessel Market": f"{vessel_market:.2f}",
                     "Decision": "Spot Recommended" if base_spot_rate > breakeven else "TC/Idle Preferred"
                 })
     
