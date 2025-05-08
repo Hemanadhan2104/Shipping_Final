@@ -570,7 +570,7 @@ if __name__ == "__main__":
             
             # Replacing sliders with input boxes
             st.session_state.fleet_size_number_supply = st.text_input("Fleet Size (# of Ships)", value=st.session_state.get('fleet_size_number_supply', 3131), key="fleet_size_number_supply_input")
-            st.session_state.fleet_size_dwt_supply_in_dwt_million = st.text_input("Supply (M DWT)", value=st.session_state.get('fleet_size_dwt_supply_in_dwt_million', 254.1), key="fleet_size_dwt_supply_in_dwt_million_input")
+            st.session_state.fleet_size_dwt_supply_in_dwt_million = st.text_input("Supply (DWT Million)", value=st.session_state.get('fleet_size_dwt_supply_in_dwt_million', 254.1), key="fleet_size_dwt_supply_in_dwt_million_input")
             st.session_state.utilization_constant = st.text_input("Utilization Factor", value=st.session_state.get('utilization_constant', 0.95), key="utilization_constant_input")
             st.session_state.assumed_speed = st.text_input("Speed (knots)", value=st.session_state.get('assumed_speed', 11.0), key="assumed_speed_input")
             st.session_state.sea_margin = st.text_input("Sea Margin (%)", value=st.session_state.get('sea_margin', 0.05), key="sea_margin_input")
