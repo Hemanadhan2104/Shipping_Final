@@ -556,75 +556,77 @@ if __name__ == "__main__":
                 st.success(f"Optimal Economical Speed: {best_speed:.1f} knots with TCE of ${best_speed_row['TCE ($/day)']:.2f}/day")
     def page_4():
         st.title("Market Condition")
-
+    
         col_button_empty, col_button = st.columns([5, 1])
         with col_button:
             if st.button("Go Back to Main", key="market_condition_back_button"): # Added unique key
                 st.session_state.page = "main"
-
+    
         # Create two columns for layout
         col_inputs, col_results = st.columns(2)
-
+    
         with col_inputs:
             st.subheader("Market Inputs")
-            st.session_state.scenario_name = st.text_input("Scenario Name", value=st.session_state.get('scenario_name', "My Scenario"), key="scenario_name_input")
-            st.session_state.ets_price = st.slider("EU ETS Carbon Price (€/t CO₂)", 60, 150, st.session_state.get('ets_price', 95), key="ets_price_slider")
-            st.session_state.lng_bunker_price = st.slider("LNG Bunker Price ($/ton)", 600, 1000, st.session_state.get('lng_bunker_price', 730), key="lng_bunker_price_slider")
-
-            st.subheader("Freight Market Inputs")
-            st.session_state.fleet_size_number_supply = st.slider("Fleet Size (# of Ships)", 1, 5000, st.session_state.get('fleet_size_number_supply', 3131), step=1, key="fleet_size_number_supply_slider")
-            st.session_state.fleet_size_dwt_supply_in_dwt_million = st.slider("Supply (M DWT)", 100.0, 500.0, st.session_state.get('fleet_size_dwt_supply_in_dwt_million', 254.1), step=0.1, key="fleet_size_dwt_supply_in_dwt_million_slider")
-            st.session_state.utilization_constant = st.slider("Utilization Factor", 0.0, 1.0, st.session_state.get('utilization_constant', 0.95), step=0.01, key="utilization_constant_slider")
-            st.session_state.assumed_speed = st.slider("Speed (knots)", 5.0, 20.0, st.session_state.get('assumed_speed', 11.0), step=0.1, key="assumed_speed_slider")
-            st.session_state.sea_margin = st.slider("Sea Margin (%)", 0.0, 0.1, st.session_state.get('sea_margin', 0.05), step=0.01, key="sea_margin_slider")
-            st.session_state.assumed_laden_days = st.slider("Laden Days Fraction", 0.0, 1.0, st.session_state.get('assumed_laden_days', 0.4), step=0.01, key="assumed_laden_days_slider")
-            st.session_state.demand_billion_ton_mile = st.slider("Demand (Bn Ton Mile)", 1000.0, 20000.0, st.session_state.get('demand_billion_ton_mile', 10396.0), step=10.0, key="demand_billion_ton_mile_slider")
+            
+            # Replacing sliders with input boxes
+            st.session_state.fleet_size_number_supply = st.text_input("Fleet Size (# of Ships)", value=st.session_state.get('fleet_size_number_supply', 3131), key="fleet_size_number_supply_input")
+            st.session_state.fleet_size_dwt_supply_in_dwt_million = st.text_input("Supply (M DWT)", value=st.session_state.get('fleet_size_dwt_supply_in_dwt_million', 254.1), key="fleet_size_dwt_supply_in_dwt_million_input")
+            st.session_state.utilization_constant = st.text_input("Utilization Factor", value=st.session_state.get('utilization_constant', 0.95), key="utilization_constant_input")
+            st.session_state.assumed_speed = st.text_input("Speed (knots)", value=st.session_state.get('assumed_speed', 11.0), key="assumed_speed_input")
+            st.session_state.sea_margin = st.text_input("Sea Margin (%)", value=st.session_state.get('sea_margin', 0.05), key="sea_margin_input")
+            st.session_state.assumed_laden_days = st.text_input("Laden Days Fraction", value=st.session_state.get('assumed_laden_days', 0.4), key="assumed_laden_days_input")
+            st.session_state.demand_billion_ton_mile = st.text_input("Demand (Bn Ton Mile)", value=st.session_state.get('demand_billion_ton_mile', 10396.0), key="demand_billion_ton_mile_input")
             st.session_state.auto_tightness = st.checkbox("Auto-calculate market tightness", value=st.session_state.get('auto_tightness', True), key="auto_tightness_checkbox")
             if not st.session_state.auto_tightness:
-                st.session_state.manual_tightness = st.slider("Manual Market Tightness", 0.0, 1.0, st.session_state.get("manual_tightness", 0.5), step=0.01, key="manual_tightness_slider")
-            st.session_state.base_spot_rate = st.slider("Spot Rate (USD/day)", 5000, 150000, st.session_state.get('base_spot_rate', 60000), step=1000, key="base_spot_rate_slider")
-            st.session_state.base_tc_rate = st.slider("TC Rate (USD/day)", 5000, 140000, st.session_state.get('base_tc_rate', 50000), step=1000, key="base_tc_rate_slider")
-            st.session_state.carbon_calc_method = st.radio("Carbon Cost Based On", ["Main Engine Consumption", "Boil Off Rate"], index=["Main Engine Consumption", "Boil Off Rate"].index(st.session_state.get('carbon_calc_method', 'Main Engine Consumption')), key="carbon_calc_method_radio")
-
+                st.session_state.manual_tightness = st.text_input("Manual Market Tightness", value=st.session_state.get("manual_tightness", 0.5), key="manual_tightness_input")
+            st.session_state.base_spot_rate = st.text_input("Spot Rate (USD/day)", value=st.session_state.get('base_spot_rate', 60000), key="base_spot_rate_input")
+            st.session_state.base_tc_rate = st.text_input("TC Rate (USD/day)", value=st.session_state.get('base_tc_rate', 50000), key="base_tc_rate_input")
+    
+            # st.session_state.carbon_calc_method = st.radio("Carbon Cost Based On", ["Main Engine Consumption", "Boil Off Rate"], index=["Main Engine Consumption", "Boil Off Rate"].index(st.session_state.get('carbon_calc_method', 'Main Engine Consumption')), key="carbon_calc_method_radio")
+    
         with col_results:
-            st.header("Market Inputs")
-            st.write(f"Scenario Name: {st.session_state.get('scenario_name', 'My Scenario')}")
-            st.write(f"EU ETS Carbon Price: {st.session_state.get('ets_price', 95)} €/t CO₂")
-            st.write(f"LNG Bunker Price: {st.session_state.get('lng_bunker_price', 730)} $/ton")
-            st.subheader("Freight Market Inputs")
-            st.write(f"Fleet Size: {st.session_state.get('fleet_size_number_supply', 3131)} Ships")
-            st.write(f"Supply: {st.session_state.get('fleet_size_dwt_supply_in_dwt_million', 254.1)} M DWT")
-            st.write(f"Utilization Factor: {st.session_state.get('utilization_constant', 0.95)}")
-            st.write(f"Assumed Speed: {st.session_state.get('assumed_speed', 11.0)} knots")
-            st.write(f"Sea Margin: {st.session_state.get('sea_margin', 0.05) * 100}%")
-            st.write(f"Laden Days Fraction: {st.session_state.get('assumed_laden_days', 0.4)}")
-            st.write(f"Demand: {st.session_state.get('demand_billion_ton_mile', 10396.0)} Bn Ton Mile")
-            st.write(f"Auto-calculate market tightness: {st.session_state.get('auto_tightness', True)}")
             st.subheader("Equilibrium Calculations")
-            dwt_utilization = (st.session_state.fleet_size_dwt_supply_in_dwt_million * 1_000_000 / st.session_state.fleet_size_number_supply) * st.session_state.utilization_constant
-            distance_travelled_per_day = st.session_state.assumed_speed * 24 * (1 - st.session_state.sea_margin)
-            productive_laden_days_per_year = st.session_state.assumed_laden_days * 365
-            maximum_supply_billion_ton_mile = st.session_state.fleet_size_number_supply * dwt_utilization * distance_travelled_per_day * productive_laden_days_per_year / 1_000_000_000
-            equilibrium = st.session_state.demand_billion_ton_mile - maximum_supply_billion_ton_mile
-
-            if st.session_state.auto_tightness:
-                market_tightness = min(max(0.3 + (equilibrium / st.session_state.demand_billion_ton_mile), 0.0), 1.0)
-            else:
-                market_tightness = st.session_state.get("manual_tightness", 0.5)
-
-            sensitivity = abs(equilibrium / st.session_state.demand_billion_ton_mile)
-
-            st.write(f"DWT Utilization: {dwt_utilization:.1f} MT")
-            st.write(f"Max Supply: {maximum_supply_billion_ton_mile:.1f} Bn Ton Mile")
-            st.write(f"Equilibrium: {equilibrium:.1f} Bn Ton Mile")
-            st.write(f"Market Condition: { 'Excess Supply' if equilibrium < 0 else 'Excess Demand'}")
-            st.write(f"Market Tightness: {market_tightness:.2f}")
-            st.write(f"Market Sensitivity: {sensitivity:.2%}")
-
-            st.subheader("Base Rates")
-            st.write(f"Spot Rate: {st.session_state.base_spot_rate} USD/day")
-            st.write(f"TC Rate: {st.session_state.base_tc_rate} USD/day")
-            st.write(f"Carbon Cost Based On: {st.session_state.carbon_calc_method}")
+            
+            try:
+                fleet_size_number_supply = float(st.session_state.fleet_size_number_supply)
+                fleet_size_dwt_supply_in_dwt_million = float(st.session_state.fleet_size_dwt_supply_in_dwt_million)
+                utilization_constant = float(st.session_state.utilization_constant)
+                assumed_speed = float(st.session_state.assumed_speed)
+                sea_margin = float(st.session_state.sea_margin)
+                assumed_laden_days = float(st.session_state.assumed_laden_days)
+                demand_billion_ton_mile = float(st.session_state.demand_billion_ton_mile)
+    
+                dwt_utilization = (fleet_size_dwt_supply_in_dwt_million * 1_000_000 / fleet_size_number_supply) * utilization_constant
+                distance_travelled_per_day = assumed_speed * 24 * (1 - sea_margin)
+                productive_laden_days_per_year = assumed_laden_days * 365
+                maximum_supply_billion_ton_mile = fleet_size_number_supply * dwt_utilization * distance_travelled_per_day * productive_laden_days_per_year / 1_000_000_000
+                equilibrium = demand_billion_ton_mile - maximum_supply_billion_ton_mile
+    
+                if st.session_state.auto_tightness:
+                    market_tightness = min(max(0.3 + (equilibrium / demand_billion_ton_mile), 0.0), 1.0)
+                else:
+                    market_tightness = float(st.session_state.get("manual_tightness", 0.5))
+    
+                sensitivity = abs(equilibrium / demand_billion_ton_mile)
+    
+                # Adding new fields for productivity and excess/deficit vessels
+                productivity_per_vessel = maximum_supply_billion_ton_mile / fleet_size_number_supply
+                excess_deficit_vessels = equilibrium / productivity_per_vessel
+    
+                # Displaying results
+                st.write(f"DWT Utilization: {dwt_utilization:.1f} MT")
+                st.write(f"Max Supply: {maximum_supply_billion_ton_mile:.1f} Bn Ton Mile")
+                st.write(f"Equilibrium: {equilibrium:.1f} Bn Ton Mile")
+                st.write(f"Market Condition: { 'Excess Supply' if equilibrium < 0 else 'Excess Demand'}")
+                st.write(f"Market Tightness: {market_tightness:.2f}")
+                st.write(f"Market Sensitivity: {sensitivity:.2%}")
+                
+                # New fields
+                st.write(f"Productivity per Vessel: {productivity_per_vessel:.2f} Bn Ton Mile")
+                st.write(f"Excess/Deficit Vessels: {excess_deficit_vessels:.1f} vessels")
+            
+            except ValueError:
+                st.error("Please enter valid numeric values for the inputs.")
 
 
 
