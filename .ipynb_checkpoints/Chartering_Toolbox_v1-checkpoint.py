@@ -440,7 +440,7 @@ if __name__ == "__main__":
             st.error("Vessel data not found. Please fill out data in the previous page first.")
             return
     
-        col_input, col_results = st.columns([0.7, 2.3])  # Adjusted column widths
+        col_input, col_results = st.columns([0.7, 4.2])  # Adjusted column widths
     
         with col_input:
             st.subheader("Simulation Inputs")
@@ -494,7 +494,7 @@ if __name__ == "__main__":
                 if vessel["Actual_GHG_Intensity"] > required_ghg_intensity:
                     excess = vessel["Actual_GHG_Intensity"] - required_ghg_intensity
                     ghg_penalty = excess * penalty_per_excess_unit
-                breakeven = fuel_cost + carbon_cost + margin_cost + ghg_penalty
+                breakeven = fuel_cost + carbon_cost + margin_cost + ghg_penalty+ vessel["Operational_m"]
                 vessel_market = base_spot_rate / breakeven if breakeven else 0
     
                 results.append({
@@ -503,6 +503,7 @@ if __name__ == "__main__":
                     "Carbon Cost ($/day)": f"{carbon_cost:,.1f}",
                     "GHG Penalty ($/day)": f"{ghg_penalty:,.1f}",
                     "Margin ($/day)": f"{margin_cost:,.1f}",
+                    "Operation Cost ($/day)": f"{vessel['Operational_m']:,.1f}",
                     # "Operation Cost ($/day)": f"{operation_m:,.1f}",
                     "Breakeven Spot ($/day)": f"{breakeven:,.1f}",
                     "Vessel Market": f"{vessel_market:.2f}",
