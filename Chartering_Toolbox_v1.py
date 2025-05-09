@@ -8,6 +8,7 @@ import pandas as pd
 from matplotlib.ticker import PercentFormatter
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import string
 from functools import partial
 # Hide Streamlit's default menu and GitHub link
 st.set_page_config(layout="wide")
@@ -268,9 +269,27 @@ if __name__ == "__main__":
                 st.session_state.page = "main"
    
 
+
+
     def page_1():
+        st.header("🛠️ Vessel Input Section")
+    
+        # --- Number of Vessels Input (1-26) ---
+        num_vessels = st.number_input("Enter number of vessels (1–26)", min_value=1, max_value=26, value=10, step=1)
+        vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
+    
+        # --- Performance Profiles ---
+        performance_profiles = {
+            "good": {"a": 10, "b": 2, "c": 0.05, "d": 0.001},
+            "medium": {"a": 12, "b": 2.5, "c": 0.06, "d": 0.0012},
+            "poor": {"a": 15, "b": 3, "c": 0.07, "d": 0.0015},
+        }
+    
+        def calculate_fuel_consumption(speed, profile="good"):
+            coeffs = performance_profiles[profile]
+            return coeffs["a"] + coeffs["b"] * speed + coeffs["c"] * speed**2 + coeffs["d"] * speed**3
+    
         def load_or_initialize_csv_data(index, default_data):
-            """Loads vessel CSV if available or initializes with default."""
             session_key = f"editor_data_{index}"
             save_path = f"data/vessel_{index}.csv"
     
@@ -283,37 +302,24 @@ if __name__ == "__main__":
                     st.session_state[session_key] = default_data.copy()
                     default_data.to_csv(save_path, index=False)
     
-        st.header("🛠️ Vessel Input Section")
-    
-        # --- Performance Profiles ---
-        performance_profiles = {
-            "good": {"a": 10, "b": 2, "c": 0.05, "d": 0.001},
-            "medium": {"a": 12, "b": 2.5, "c": 0.06, "d": 0.0012},
-            "poor": {"a": 15, "b": 3, "c": 0.07, "d": 0.0015},
-        }
-    
-        # --- Fuel Calculation Function ---
-        def calculate_fuel_consumption(speed, profile="good"):
-            coeffs = performance_profiles[profile]
-            return coeffs["a"] + coeffs["b"] * speed + coeffs["c"] * speed**2 + coeffs["d"] * speed**3
-    
         # --- Initialize Vessel Data ---
-        if "vessel_data" not in st.session_state:
+        if "vessel_data" not in st.session_state or len(st.session_state["vessel_data"]) != num_vessels:
             st.session_state["vessel_data"] = pd.DataFrame({
-                "Vessel_ID": range(1, 11),
-                "Name": [f"LNG Carrier {chr(65 + i)}" for i in range(10)],
-                "Length_m": [295] * 10,
-                "Beam_m": [46] * 10,
-                "Draft_m": [11.5] * 10,
-                "Capacity_CBM": [160000] * 10,
-                "FuelEU_GHG_Compliance": [65, 65, 65, 80, 80, 80, 95, 95, 95, 95],
-                "CII_Rating": ["A", "A", "A", "B", "B", "B", "C", "C", "C", "C"],
-                "Boil_Off_Rate_percent": [0.08, 0.08, 0.08, 0.09, 0.09, 0.09, 0.07, 0.07, 0.07, 0.07],
-                "Margin": [2000] * 10,
-                "Operational_m": [50000] * 10,
-                "Performance_Profile": ["good"] * 10,
-                 "Actual_GHG_Intensity": [50] * 10 
-            })
+                "Vessel_ID": range(1, num_vessels + 1),
+                "Name": vessel_names,
+                "Length_m": [295] * num_vessels,
+                "Beam_m": [46] * num_vessels,
+                "Draft_m": [11.5] * num_vessels,
+                "Capacity_CBM": [160000] * num_vessels,
+                "FuelEU_GHG_Compliance": ([65, 80, 95] * ((num_vessels // 3) + 1))[:num_vessels],
+                "CII_Rating": (["A", "B", "C"] * ((num_vessels // 3) + 1))[:num_vessels],
+                "Boil_Off_Rate_percent": ([0.08, 0.09, 0.07] * ((num_vessels // 3) + 1))[:num_vessels],
+
+                "Margin": [2000] * num_vessels,
+                "Operational_m": [50000] * num_vessels,
+                "Performance_Profile": ["good"] * num_vessels,
+                "Actual_GHG_Intensity": [50] * num_vessels
+            }).iloc[:num_vessels]
     
         vessel_data = st.session_state["vessel_data"]
     
@@ -323,27 +329,20 @@ if __name__ == "__main__":
             if st.button("Go Back to Main", key="back_to_main_page1"):
                 st.session_state.page = "main"
     
+        # --- Display Vessel UI ---
         cols = st.columns(2)
         for idx, row in vessel_data.iterrows():
             with cols[idx % 2].expander(f"🚢 {row['Name']}"):
-                # Editable vessel data
                 vessel_data.at[idx, "Name"] = st.text_input("Vessel Name", value=row["Name"], key=f"name_{idx}")
                 vessel_data.at[idx, "Length_m"] = st.number_input("Length (m)", value=row["Length_m"], key=f"len_{idx}")
                 vessel_data.at[idx, "Beam_m"] = st.number_input("Beam (m)", value=row["Beam_m"], key=f"beam_{idx}")
                 vessel_data.at[idx, "Draft_m"] = st.number_input("Draft (m)", value=row["Draft_m"], key=f"draft_{idx}")
                 vessel_data.at[idx, "Operational_m"] = st.number_input("Operational Cost (USD/day)", value=row["Operational_m"], key=f"operational_{idx}")
-               
                 vessel_data.at[idx, "Margin"] = st.number_input("Margin (USD/day)", value=row["Margin"], key=f"margin_{idx}")
-                # Input for Actual GHG Intensity (gCO2e/MJ)
-                vessel_data.at[idx, "Actual_GHG_Intensity"] = st.number_input(
-                    "Actual GHG Intensity (gCO2e/MJ)", 
-                    value=row["Actual_GHG_Intensity"], 
-                    key=f"ghg_intensity_{idx}"
-                )
-
-                # Save updated data
+                vessel_data.at[idx, "Actual_GHG_Intensity"] = st.number_input("Actual GHG Intensity (gCO2e/MJ)", value=row["Actual_GHG_Intensity"], key=f"ghg_intensity_{idx}")
+    
                 st.session_state["vessel_data"] = vessel_data
-
+    
                 show_details = st.toggle("Show Performance Details", key=f"toggle_{idx}")
                 if show_details:
                     st.subheader("✏️ Speed vs. Fuel Consumption (tons/day)")
@@ -382,7 +381,6 @@ if __name__ == "__main__":
                             fig.add_trace(go.Scatter(x=speeds, y=consumptions, mode='markers', name='User Input'))
                             fig.add_trace(go.Scatter(x=smooth_speeds, y=fitted_curve, mode='lines', name='Fitted Curve', line=dict(color='green')))
     
-                            # --- Comparison ---
                             compare_toggle = st.checkbox("Compare with another vessel", key=f"compare_toggle_{idx}")
                             if compare_toggle:
                                 compare_vessel = st.selectbox("Select vessel to compare", [v for i, v in enumerate(vessel_data['Name']) if i != idx], key=f"compare_{idx}")
