@@ -331,7 +331,7 @@ if __name__ == "__main__":
                 vessel_data.at[idx, "Length_m"] = st.number_input("Length (m)", value=row["Length_m"], key=f"len_{idx}")
                 vessel_data.at[idx, "Beam_m"] = st.number_input("Beam (m)", value=row["Beam_m"], key=f"beam_{idx}")
                 vessel_data.at[idx, "Draft_m"] = st.number_input("Draft (m)", value=row["Draft_m"], key=f"draft_{idx}")
-                vessel_data.at[idx, "Operational_m"] = st.number_input("Operational Cost (m)", value=row["Operational_m"], key=f"operational_{idx}")
+                vessel_data.at[idx, "Operational_m"] = st.number_input("Operational Cost (USD/day)", value=row["Operational_m"], key=f"operational_{idx}")
                
                 vessel_data.at[idx, "Margin"] = st.number_input("Margin (USD/day)", value=row["Margin"], key=f"margin_{idx}")
                 # Input for Actual GHG Intensity (gCO2e/MJ)
