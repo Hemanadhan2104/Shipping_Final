@@ -288,21 +288,25 @@ if __name__ == "__main__":
         st.session_state["num_vessels"] = num_vessels
     
         # Initialize vessel_data only once
+        # Load or initialize vessel_data
         if "vessel_data" not in st.session_state:
-            vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
-            st.session_state["vessel_data"] = pd.DataFrame({
-                "Vessel_ID": range(1, num_vessels + 1),
-                "Name": vessel_names,
-                "Capacity_CBM": [160000] * num_vessels,
-                "FuelEU_GHG_Compliance": ([65, 80, 95] * ((num_vessels // 3) + 1))[:num_vessels],
-                "CII_Rating": (["A", "B", "C"] * ((num_vessels // 3) + 1))[:num_vessels],
-                "Boil_Off_Rate_percent": ([0.08, 0.09, 0.07] * ((num_vessels // 3) + 1))[:num_vessels],
-                "Margin": [2000] * num_vessels,
-                "Operational_m": [50000] * num_vessels,
-                "Performance_Profile": ["good"] * num_vessels,
-                "Actual_GHG_Intensity": [50] * num_vessels
-            })
-    
+            if os.path.exists("data/vessel_data.csv"):
+                st.session_state["vessel_data"] = pd.read_csv("data/vessel_data.csv")
+            else:
+                vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
+                st.session_state["vessel_data"] = pd.DataFrame({
+                    "Vessel_ID": range(1, num_vessels + 1),
+                    "Name": vessel_names,
+                    "Capacity_CBM": [160000] * num_vessels,
+                    "FuelEU_GHG_Compliance": ([65, 80, 95] * ((num_vessels // 3) + 1))[:num_vessels],
+                    "CII_Rating": (["A", "B", "C"] * ((num_vessels // 3) + 1))[:num_vessels],
+                    "Boil_Off_Rate_percent": ([0.08, 0.09, 0.07] * ((num_vessels // 3) + 1))[:num_vessels],
+                    "Margin": [2000] * num_vessels,
+                    "Operational_m": [50000] * num_vessels,
+                    "Performance_Profile": ["good"] * num_vessels,
+                    "Actual_GHG_Intensity": [50] * num_vessels
+                })
+        
         # Adjust vessel_data if new vessels added
         vessel_data = st.session_state["vessel_data"]
         if len(vessel_data) < num_vessels:
