@@ -10,6 +10,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import string
 from functools import partial
+
 # Hide Streamlit's default menu and GitHub link
 st.set_page_config(layout="wide")
 st.markdown(
@@ -270,99 +271,108 @@ if __name__ == "__main__":
    
 
 
-
+    
     def page_1():
-        st.header("🛠️ Vessel Input Section")
+        st.header("🛠 Vessel Input Section")
     
-        # --- Number of Vessels Input (1-26) ---
-        num_vessels = st.number_input("Enter number of vessels (1–26)", min_value=1, max_value=26, value=10, step=1)
-        vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
+        # Load number of vessels
+        if "num_vessels" not in st.session_state:
+            st.session_state["num_vessels"] = 1
     
-        # --- Performance Profiles ---
-        performance_profiles = {
-            "good": {"a": 10, "b": 2, "c": 0.05, "d": 0.001},
-            "medium": {"a": 12, "b": 2.5, "c": 0.06, "d": 0.0012},
-            "poor": {"a": 15, "b": 3, "c": 0.07, "d": 0.0015},
-        }
+        num_vessels = st.number_input(
+            "Enter number of vessels (1–26)",
+            min_value=1, max_value=26,
+            value=st.session_state["num_vessels"],
+            step=1
+        )
+        st.session_state["num_vessels"] = num_vessels
     
-        def calculate_fuel_consumption(speed, profile="good"):
-            coeffs = performance_profiles[profile]
-            return coeffs["a"] + coeffs["b"] * speed + coeffs["c"] * speed**2 + coeffs["d"] * speed**3
-    
-        def load_or_initialize_csv_data(index, default_data):
-            session_key = f"editor_data_{index}"
-            save_path = f"data/vessel_{index}.csv"
-    
-            if not os.path.exists("data"):
-                os.makedirs("data")
-            if session_key not in st.session_state:
-                if os.path.exists(save_path):
-                    st.session_state[session_key] = pd.read_csv(save_path)
-                else:
-                    st.session_state[session_key] = default_data.copy()
-                    default_data.to_csv(save_path, index=False)
-    
-        # --- Initialize Vessel Data ---
-        if "vessel_data" not in st.session_state or len(st.session_state["vessel_data"]) != num_vessels:
+        # Initialize vessel_data only once
+        if "vessel_data" not in st.session_state:
+            vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
             st.session_state["vessel_data"] = pd.DataFrame({
                 "Vessel_ID": range(1, num_vessels + 1),
                 "Name": vessel_names,
-                "Length_m": [295] * num_vessels,
-                "Beam_m": [46] * num_vessels,
-                "Draft_m": [11.5] * num_vessels,
                 "Capacity_CBM": [160000] * num_vessels,
                 "FuelEU_GHG_Compliance": ([65, 80, 95] * ((num_vessels // 3) + 1))[:num_vessels],
                 "CII_Rating": (["A", "B", "C"] * ((num_vessels // 3) + 1))[:num_vessels],
                 "Boil_Off_Rate_percent": ([0.08, 0.09, 0.07] * ((num_vessels // 3) + 1))[:num_vessels],
-
                 "Margin": [2000] * num_vessels,
                 "Operational_m": [50000] * num_vessels,
                 "Performance_Profile": ["good"] * num_vessels,
                 "Actual_GHG_Intensity": [50] * num_vessels
-            }).iloc[:num_vessels]
+            })
     
+        # Adjust vessel_data if new vessels added
         vessel_data = st.session_state["vessel_data"]
+        if len(vessel_data) < num_vessels:
+            diff = num_vessels - len(vessel_data)
+            new_data = pd.DataFrame({
+                "Vessel_ID": range(len(vessel_data)+1, num_vessels + 1),
+                "Name": [f"LNG Carrier {chr(65 + i)}" for i in range(len(vessel_data), num_vessels)],
+                "Capacity_CBM": [160000] * diff,
+                "FuelEU_GHG_Compliance": ([65, 80, 95] * ((diff // 3) + 1))[:diff],
+                "CII_Rating": (["A", "B", "C"] * ((diff // 3) + 1))[:diff],
+                "Boil_Off_Rate_percent": ([0.08, 0.09, 0.07] * ((diff // 3) + 1))[:diff],
+                "Margin": [2000] * diff,
+                "Operational_m": [50000] * diff,
+                "Performance_Profile": ["good"] * diff,
+                "Actual_GHG_Intensity": [50] * diff
+            })
+            st.session_state["vessel_data"] = pd.concat([vessel_data, new_data], ignore_index=True)
+            vessel_data = st.session_state["vessel_data"]
     
-        # --- Navigation Button ---
+        # Save to CSV
+        vessel_data.to_csv("data/vessel_data.csv", index=False)
+    
+        # Go Back button
         col_button_empty, col_button = st.columns([5, 1])
         with col_button:
             if st.button("Go Back to Main", key="back_to_main_page1"):
                 st.session_state.page = "main"
     
-        # --- Display Vessel UI ---
         cols = st.columns(2)
-        for idx, row in vessel_data.iterrows():
-            with cols[idx % 2].expander(f"🚢 {row['Name']}"):
-                vessel_data.at[idx, "Name"] = st.text_input("Vessel Name", value=row["Name"], key=f"name_{idx}")
-                vessel_data.at[idx, "Length_m"] = st.number_input("Length (m)", value=row["Length_m"], key=f"len_{idx}")
-                vessel_data.at[idx, "Beam_m"] = st.number_input("Beam (m)", value=row["Beam_m"], key=f"beam_{idx}")
-                vessel_data.at[idx, "Draft_m"] = st.number_input("Draft (m)", value=row["Draft_m"], key=f"draft_{idx}")
-                vessel_data.at[idx, "Operational_m"] = st.number_input("Operational Cost (USD/day)", value=row["Operational_m"], key=f"operational_{idx}")
-                vessel_data.at[idx, "Margin"] = st.number_input("Margin (USD/day)", value=row["Margin"], key=f"margin_{idx}")
-                vessel_data.at[idx, "Actual_GHG_Intensity"] = st.number_input("Actual GHG Intensity (gCO2e/MJ)", value=row["Actual_GHG_Intensity"], key=f"ghg_intensity_{idx}")
+        for idx in range(len(vessel_data)):
+            with cols[idx % 2].expander(f"🚢 {vessel_data.at[idx, 'Name']}"):
+                name = st.text_input("Vessel Name", value=vessel_data.at[idx, "Name"], key=f"name_{idx}")
+                operational = st.number_input("Operational Cost (USD/day)", value=vessel_data.at[idx, "Operational_m"], key=f"operational_{idx}")
+                margin = st.number_input("Margin (USD/day)", value=vessel_data.at[idx, "Margin"], key=f"margin_{idx}")
+                ghg = st.number_input("Actual GHG Intensity (gCO2e/MJ)", value=vessel_data.at[idx, "Actual_GHG_Intensity"], key=f"ghg_{idx}")
     
-                st.session_state["vessel_data"] = vessel_data
+                # Update in session_state
+                vessel_data.at[idx, "Name"] = name
+                vessel_data.at[idx, "Operational_m"] = operational
+                vessel_data.at[idx, "Margin"] = margin
+                vessel_data.at[idx, "Actual_GHG_Intensity"] = ghg
     
+                # Speed vs Fuel Table Editor
                 show_details = st.toggle("Show Performance Details", key=f"toggle_{idx}")
                 if show_details:
-                    st.subheader("✏️ Speed vs. Fuel Consumption (tons/day)")
+                    st.subheader("✏ Speed vs. Fuel Consumption (tons/day)")
                     editor_key = f"editor_widget_{idx}"
                     session_key = f"editor_data_{idx}"
+                    csv_path = f"data/vessel_{idx}.csv"
     
-                    default_speed_data = pd.DataFrame({
+                    default_data = pd.DataFrame({
                         "Speed (knots)": [10, 12, 14],
-                        "Fuel Consumption (tons/day)": [20, 25, 30]
+                        "Fuel Consumption (tons/day)": [20.0, 25.0, 30.0]
                     })
     
-                    load_or_initialize_csv_data(idx, default_speed_data)
+                    if not os.path.exists("data"):
+                        os.makedirs("data")
     
-                    edited_data = st.data_editor(
-                        st.session_state[session_key],
-                        key=editor_key,
-                        num_rows="dynamic"
-                    )
-                    edited_data.to_csv(f"data/vessel_{idx}.csv", index=False)
+                    if session_key not in st.session_state:
+                        if os.path.exists(csv_path):
+                            st.session_state[session_key] = pd.read_csv(csv_path)
+                        else:
+                            st.session_state[session_key] = default_data.copy()
     
+                    edited_data = st.data_editor(st.session_state[session_key], key=editor_key, num_rows="dynamic")
+                    edited_data["Fuel Consumption (tons/day)"] = edited_data["Fuel Consumption (tons/day)"].round(1)
+                    st.session_state[session_key] = edited_data
+                    edited_data.to_csv(csv_path, index=False)
+
+
                     try:
                         speeds = edited_data["Speed (knots)"].dropna().astype(float).values
                         consumptions = edited_data["Fuel Consumption (tons/day)"].dropna().astype(float).values
@@ -421,6 +431,13 @@ if __name__ == "__main__":
     
                     except Exception as e:
                         st.error(f"Error processing data: {e}")
+
+    
+        # Save vessel_data after edits
+        st.session_state["vessel_data"] = vessel_data
+        vessel_data.to_csv("data/vessel_data.csv", index=False)
+    
+      
 
 
     def page_2():
