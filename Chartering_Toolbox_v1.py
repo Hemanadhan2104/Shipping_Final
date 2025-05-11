@@ -275,24 +275,28 @@ if __name__ == "__main__":
     def page_1():
         st.header("🛠 Vessel Input Section")
     
-        # Load number of vessels
+     # Retrieve num_vessels from session_state if it exists, otherwise set default to 10
         if "num_vessels" not in st.session_state:
-            st.session_state["num_vessels"] = 1
+            st.session_state["num_vessels"] = 10  # Default value
     
-        num_vessels = st.number_input(
-            "Enter number of vessels (1–26)",
-            min_value=1, max_value=26,
-            value=st.session_state["num_vessels"],
-            step=1
-        )
+        # User input for number of vessels
+        num_vessels = st.number_input("How many LNG Carriers to display?", 
+                                      min_value=1, 
+                                      max_value=26, 
+                                      value=st.session_state["num_vessels"])
+        
+        # Update the session state with the new value of num_vessels
         st.session_state["num_vessels"] = num_vessels
-    
-        # Initialize vessel_data only once
+        
+        # Generate vessel names like A, B, C, ...
+        vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
+        
         # Load or initialize vessel_data
         if "vessel_data" not in st.session_state:
             if os.path.exists("data/vessel_data.csv"):
                 st.session_state["vessel_data"] = pd.read_csv("data/vessel_data.csv")
             else:
+                # Create initial vessel data if the CSV does not exist
                 vessel_names = [f"LNG Carrier {chr(65 + i)}" for i in range(num_vessels)]
                 st.session_state["vessel_data"] = pd.DataFrame({
                     "Vessel_ID": range(1, num_vessels + 1),
@@ -306,13 +310,14 @@ if __name__ == "__main__":
                     "Performance_Profile": ["good"] * num_vessels,
                     "Actual_GHG_Intensity": [50] * num_vessels
                 })
-        
-        # Adjust vessel_data if new vessels added
+    
+        # Adjust vessel_data if new vessels added or removed
         vessel_data = st.session_state["vessel_data"]
+        
         if len(vessel_data) < num_vessels:
             diff = num_vessels - len(vessel_data)
             new_data = pd.DataFrame({
-                "Vessel_ID": range(len(vessel_data)+1, num_vessels + 1),
+                "Vessel_ID": range(len(vessel_data) + 1, num_vessels + 1),
                 "Name": [f"LNG Carrier {chr(65 + i)}" for i in range(len(vessel_data), num_vessels)],
                 "Capacity_CBM": [160000] * diff,
                 "FuelEU_GHG_Compliance": ([65, 80, 95] * ((diff // 3) + 1))[:diff],
@@ -325,6 +330,10 @@ if __name__ == "__main__":
             })
             st.session_state["vessel_data"] = pd.concat([vessel_data, new_data], ignore_index=True)
             vessel_data = st.session_state["vessel_data"]
+    
+        elif len(vessel_data) > num_vessels:
+            vessel_data = vessel_data.iloc[:num_vessels]
+            st.session_state["vessel_data"] = vessel_data
     
         # Save to CSV
         vessel_data.to_csv("data/vessel_data.csv", index=False)
@@ -375,8 +384,7 @@ if __name__ == "__main__":
                     edited_data["Fuel Consumption (tons/day)"] = edited_data["Fuel Consumption (tons/day)"].round(1)
                     st.session_state[session_key] = edited_data
                     edited_data.to_csv(csv_path, index=False)
-
-
+    
                     try:
                         speeds = edited_data["Speed (knots)"].dropna().astype(float).values
                         consumptions = edited_data["Fuel Consumption (tons/day)"].dropna().astype(float).values
@@ -435,13 +443,11 @@ if __name__ == "__main__":
     
                     except Exception as e:
                         st.error(f"Error processing data: {e}")
-
     
         # Save vessel_data after edits
         st.session_state["vessel_data"] = vessel_data
         vessel_data.to_csv("data/vessel_data.csv", index=False)
-    
-      
+
 
 
     def page_2():
