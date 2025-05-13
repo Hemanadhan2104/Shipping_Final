@@ -337,6 +337,20 @@ if __name__ == "__main__":
     
         # Save to CSV
         vessel_data.to_csv("data/vessel_data.csv", index=False)
+
+         # ✅ Preload all performance tables for each vessel
+        for i in range(num_vessels):
+            session_key = f"editor_data_{i}"
+            csv_path = f"data/vessel_{i}.csv"
+            if session_key not in st.session_state:
+                if os.path.exists(csv_path):
+                    st.session_state[session_key] = pd.read_csv(csv_path)
+                else:
+                    st.session_state[session_key] = pd.DataFrame({
+                        "Speed (knots)": [12.0, 14.0, 16.0],
+                        "Fuel Consumption (tons/day)": [50.0, 70.0, 90.0]
+                    })
+
     
         # Go Back button
         col_button_empty, col_button = st.columns([5, 1])
@@ -344,6 +358,7 @@ if __name__ == "__main__":
             if st.button("Go Back to Main", key="back_to_main_page1"):
                 st.session_state.page = "main"
     
+        
         cols = st.columns(2)
         for idx in range(len(vessel_data)):
             with cols[idx % 2].expander(f"🚢 {vessel_data.at[idx, 'Name']}"):
@@ -365,11 +380,17 @@ if __name__ == "__main__":
                     editor_key = f"editor_widget_{idx}"
                     session_key = f"editor_data_{idx}"
                     csv_path = f"data/vessel_{idx}.csv"
-    
-                    default_data = pd.DataFrame({
-                        "Speed (knots)": [10, 12, 14],
-                        "Fuel Consumption (tons/day)": [20.0, 25.0, 30.0]
-                    })
+                # # After initializing vessel details (in page_1)
+                # for i in range(num_vessels):
+                #     table_key = f"editor_data_{i}"
+                #     if table_key not in st.session_state:
+                #         # Default performance data
+                #         default_data = pd.DataFrame({
+                #             "Speed (knots)": [12.0, 14.0, 16.0],
+                #             "Fuel Consumption (tons/day)": [50.0, 70.0, 90.0]
+                #         })
+                #         st.session_state[table_key] = default_data
+                    
     
                     if not os.path.exists("data"):
                         os.makedirs("data")
@@ -447,7 +468,6 @@ if __name__ == "__main__":
         # Save vessel_data after edits
         st.session_state["vessel_data"] = vessel_data
         vessel_data.to_csv("data/vessel_data.csv", index=False)
-
 
 
     def page_2():
@@ -538,72 +558,85 @@ if __name__ == "__main__":
             results_df = pd.DataFrame(results)
             st.dataframe(results_df, use_container_width=True)
 
-
     def page_3():
         st.title("Voyage Simulation Advisor")
-        col_button_empty, col_button = st.columns([5, 1])
-        with col_button:
+    
+        # ── Navigation ────────────────────────────────────────────────────────────────
+        _, col = st.columns([5,1])
+        with col:
             if st.button("Go Back to Main"):
                 st.session_state.page = "main"
     
-        vessel_data = pd.DataFrame({
-            "Vessel_ID": range(1, 11),
-            "Name": [f"LNG Carrier {chr(65 + i)}" for i in range(10)],
-            "Length_m": [295] * 10,
-            "Beam_m": [46] * 10,
-            "Draft_m": [11.5] * 10,
-            "Capacity_CBM": [160000] * 10,
-            "FuelEU_GHG_Compliance": [65, 65, 65, 80, 80, 80, 95, 95, 95, 95],
-            "CII_Rating": ["A", "A", "A", "B", "B", "B", "C", "C", "C", "C"],
-            "Main_Engine_Consumption_MT_per_day": [70, 72, 74, 85, 88, 90, 100, 102, 105, 107],
-            "Generator_Consumption_MT_per_day": [5, 5, 5, 6, 6, 6, 7, 7, 7, 7],
-            "Boil_Off_Rate_percent": [0.08, 0.08, 0.08, 0.09, 0.09, 0.09, 0.07, 0.07, 0.07, 0.07],
-            "Margin": [2000] * 10
-        })
-        # Input Prices
-        p = st.number_input("Fuel Price (USD/MT)", value=700)
-        ets_price = st.number_input("ETS Price (USD/MT of CO2 equivalent)", value=80)
+        # ── Preconditions ─────────────────────────────────────────────────────────────
+        if "num_vessels" not in st.session_state:
+            st.warning("Please enter the number of LNG carriers on Page 1 first.")
+            return
     
-        voyage_distance = st.number_input("Voyage Distance (nautical miles)", value=5000)
-        freight_rate = st.number_input("Freight Rate (USD/day)", value=60000)
+        if "vessel_data" not in st.session_state:
+            st.warning("No vessel data found. Please fill in Page 1 first.")
+            return
     
+        # ── Inputs ────────────────────────────────────────────────────────────────────
+        num_vessels = st.session_state["num_vessels"]
+        p             = st.number_input("Fuel Price (USD/MT)", value=700)
+        ets_price     = st.number_input("ETS Price (USD/MT of CO2 eq.)", value=80)
+        voyage_dist   = st.number_input("Voyage Distance (nm)", value=5000)
+        freight_rate  = st.number_input("Freight Rate (USD/day)", value=60000)
+    
+        # ── Prepare vessel list from Page 1 ───────────────────────────────────────────
+        vessel_data = st.session_state["vessel_data"].head(num_vessels)
+    
+        # ── Simulation per vessel ────────────────────────────────────────────────────
         for idx, vessel in vessel_data.iterrows():
             with st.expander(f"🛳️ {vessel['Name']} Voyage Simulation"):
-                speeds = np.arange(10, 20.5, 0.5)
-                sim_results = []
-                for speed in speeds:
-                    voyage_days = voyage_distance / (speed * 24)
-                    total_consumption = (vessel["Main_Engine_Consumption_MT_per_day"] + vessel["Generator_Consumption_MT_per_day"]) * (speed / st.session_state.get('assumed_speed', 11.0)) ** 3 * voyage_days
-                    fuel_cost = total_consumption * p
-                    ets_cost = total_consumption * 3.114 * ets_price
-                    total_cost = fuel_cost + ets_cost + vessel["Margin"] * voyage_days
-                    tce = (freight_rate * voyage_days - total_cost) / voyage_days
     
-                    sim_results.append({
+                # Load the Speed vs Fuel table you edited on Page 1
+                table_key = f"editor_data_{idx}"
+                perf_df = st.session_state.get(table_key)
+    
+                if perf_df is None:
+                    st.warning("No performance table found for this vessel.")
+                    continue
+    
+                # Pre‐compute common factors
+                op_cost_per_day = vessel["Operational_m"]
+                margin          = vessel["Margin"]
+    
+                # Build the sim results using your exact speed rows
+                sim_rows = []
+                for _, row in perf_df.iterrows():
+                    speed = float(row["Speed (knots)"])
+                    fuel  = float(row["Fuel Consumption (tons/day)"])
+                    days  = voyage_dist / (speed * 24)
+                    fuel_cost        = fuel * p * days
+                    ets_cost         = fuel * 3.114 * ets_price * days
+                    operational_cost = op_cost_per_day * days
+                    total_cost       = fuel_cost + ets_cost + operational_cost + margin * days
+                    tce = (freight_rate * days - total_cost) / days
+    
+                    sim_rows.append({
                         "Speed (knots)": speed,
-                        "Voyage Days": f"{voyage_days:.1f}",
-                        "Fuel Consumption (MT)": total_consumption,
-                        "Fuel Cost ($)": fuel_cost,
-                        "ETS Cost ($)": ets_cost,
-                        "Total Cost ($)": total_cost,
-                        "TCE ($/day)": tce
+                        "Voyage Days": round(days, 1),
+                        "Fuel Consumption (MT/day)": fuel,
+                        "Fuel Cost ($)": round(fuel_cost, 1),
+                        "ETS Cost ($)": round(ets_cost, 1),
+                        "Operational Cost ($)": round(operational_cost, 1),
+                        "Total Cost ($)": round(total_cost, 1),
+                        "TCE ($/day)": round(tce, 1)
                     })
-                sim_df = pd.DataFrame(sim_results)
-                best_speed_row = sim_df.loc[sim_df['TCE ($/day)'].idxmax()]
-                best_speed = best_speed_row["Speed (knots)"]
     
-
-
-                def highlight_best_speed(row):
-                    # if row.name != sim_df.index.name:  # Check if it's not the header row
-                    #     if float(row["Speed (knots)"]) == best_speed:
-                    #         return ["background-color: lightgreen"] * len(row)
-                    return [""] * len(row)
-
-                st.dataframe(sim_df.style.apply(highlight_best_speed, axis=1).format(precision=1))
+                sim_df = pd.DataFrame(sim_rows)
     
-                # st.dataframe(sim_df.style.apply(highlight_best_speed, axis=1))
-                st.success(f"Optimal Economical Speed: {best_speed:.1f} knots with TCE of ${best_speed_row['TCE ($/day)']:.2f}/day")
+                # Display the data without highlighting
+                st.dataframe(sim_df)
+                best_idx = sim_df["TCE ($/day)"].idxmax()
+                best = sim_df.loc[best_idx]
+                st.success(
+                    f"Optimal: {best['Speed (knots)']} knots → TCE ${best['TCE ($/day)']}/day"
+                )
+
+
+    
     def page_4():
         st.title("Market Condition")
     

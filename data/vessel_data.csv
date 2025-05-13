@@ -1,16 +1,2 @@
 Vessel_ID,Name,Capacity_CBM,FuelEU_GHG_Compliance,CII_Rating,Boil_Off_Rate_percent,Margin,Operational_m,Performance_Profile,Actual_GHG_Intensity
-1,LNG Carrier A,160000,65,A,0.08,5000,40000,good,60
-2,LNG Carrier B,160000,65,A,0.08,2000,50000,good,50
-3,LNG Carrier C,160000,80,B,0.09,2000,50000,good,50
-4,LNG Carrier D,160000,95,C,0.07,2000,50000,good,50
-5,LNG Carrier E,160000,65,A,0.08,2000,50000,good,50
-6,LNG Carrier F,160000,80,B,0.09,2000,50000,good,50
-7,LNG Carrier G,160000,95,C,0.07,2000,50000,good,50
-8,LNG Carrier H,160000,65,A,0.08,2000,50000,good,50
-9,LNG Carrier I,160000,80,B,0.09,2000,50000,good,50
-10,LNG Carrier J,160000,95,C,0.07,2000,50000,good,50
-11,LNG Carrier K,160000,65,A,0.08,2000,50000,good,50
-12,LNG Carrier L,160000,80,B,0.09,2000,50000,good,50
-13,LNG Carrier M,160000,95,C,0.07,2000,50000,good,50
-14,LNG Carrier N,160000,65,A,0.08,1000,20000,good,10
-15,LNG Carrier O,160000,80,B,0.09,2000,50000,good,50
+1,LNG Carrier A,160000,65,A,0.08,5000,42000,good,60
